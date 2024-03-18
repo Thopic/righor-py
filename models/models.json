@@ -1,0 +1,22 @@
+[
+    {
+	"species": ["homo sapiens", "homo", "human"],
+	"chain": ["a", "alpha", "tra", "t alpha", "talpha", "ta"],
+	"id": "tmp1",
+	"filename_params": "human/t_alpha/tmp1/model_params.txt",
+	"filename_marginals": "human/t_alpha/tmp1/model_marginals.txt",
+	"filename_v_gene_cdr3_anchors": "human/t_alpha/V_gene_CDR3_anchors.csv",
+	"filename_j_gene_cdr3_anchors": "human/t_alpha/J_gene_CDR3_anchors.csv",
+	"description": "Temporary model for human TRA taken from Igor, probably a bit wrong."
+    },
+        {
+	"species": ["homo sapiens", "homo", "human"],
+	    "chain": ["b", "beta", "trb", "t beta", "tbeta", "t_beta", "tbeta", "tb"],
+	"id": "tmp1",
+	"filename_params": "human/t_beta/tmp1/model_params.txt",
+	"filename_marginals": "human/t_beta/tmp1/model_marginals.txt",
+	"filename_v_gene_cdr3_anchors": "human/t_beta/V_gene_CDR3_anchors.csv",
+	"filename_j_gene_cdr3_anchors": "human/t_beta/J_gene_CDR3_anchors.csv",
+	"description": "Temporary model for human TRB taken from Igor, probably a bit wrong."
+    }
+]
