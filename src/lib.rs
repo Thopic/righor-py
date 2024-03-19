@@ -9,8 +9,6 @@ fn righor_py(py: Python<'_>, m: &PyModule) -> PyResult<()> {
     let vdj_submod = PyModule::new(py, "vdj")?;
     let vj_submod = PyModule::new(py, "vj")?;
     vdj_submod.add_class::<vdj::PyModel>()?;
-    vdj_submod.add_wrapped(wrap_pyfunction!(vdj::test))?;
-    vdj_submod.add_wrapped(wrap_pyfunction!(vdj::test_identity))?;
     vj_submod.add_class::<vj::PyModel>()?;
     m.add_class::<righor::vdj::GenerationResult>()?;
     m.add_class::<righor::vdj::Sequence>()?;

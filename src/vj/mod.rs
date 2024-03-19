@@ -4,6 +4,7 @@ use anyhow::Result;
 use numpy::{IntoPyArray, PyArray1, PyArray2};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use rayon::prelude::*;
 use righor::vdj::{display_j_alignment, display_v_alignment, ResultInference, Sequence};
 use righor::vj::Generator;
 use righor::vj::Model;
@@ -108,6 +109,21 @@ impl PyModel {
         let dna = righor::Dna::from_string(dna_seq)?;
         let alignment = self.inner.align_sequence(dna, align_params)?;
         Ok(alignment)
+    }
+
+    pub fn align_all_sequences(
+        &self,
+        dna_seqs: Vec<String>,
+        align_params: &righor::AlignmentParameters,
+    ) -> Result<Vec<Sequence>> {
+        dna_seqs
+            .par_iter()
+            .map(|seq| {
+                let dna = righor::Dna::from_string(seq)?;
+                let alignment = self.inner.align_sequence(dna, align_params)?;
+                Ok(alignment)
+            })
+            .collect()
     }
 
     pub fn evaluate(
@@ -243,5 +259,17 @@ impl PyModel {
             .to_owned()
             .into_pyarray(py)
             .to_owned()
+    }
+
+    #[getter]
+    fn get_error_rate(&self) -> f64 {
+        self.inner.error_rate
+    }
+
+    #[setter]
+    fn set_error_rate(&mut self, value: f64) -> Result<()> {
+        self.inner.error_rate = value;
+        self.inner.initialize()?;
+        Ok(())
     }
 }
