@@ -9,7 +9,14 @@ def load_model(species: str, chain: str, identifier=None):
     on emerson data. 
     load_model("human", "tra") will load the default trb model
     """
-    model_dir = (Path(_righor.__file__).parent.parent.parent / Path("models")).absolute().as_posix()    
+    #    model_dir = .absolute().as_posix()
+    path_model = (Path(_righor.__file__).parent / Path("data") / Path("models"))
+    if not path_model.exists(): # local mode
+        path_model = (Path(_righor.__file__).parent.parent.parent / Path("righor") / Path("data") / Path("models"))
+    if not path_model.exists():
+        raise RuntimeError("Error with the installation. Data files not found.")
+    model_dir = path_model.absolute().as_posix()
+
     try:
         # Just try to load both
         model = _righor.vdj.Model.load_model(species,

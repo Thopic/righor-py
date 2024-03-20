@@ -253,6 +253,54 @@ impl PyModel {
     }
 
     #[setter]
+    fn set_range_del_v(&mut self, value: (i64, i64)) -> PyResult<()> {
+        self.inner.range_del_v = value;
+        self.inner.initialize()?;
+        Ok(())
+    }
+
+    #[getter]
+    fn get_range_del_v(&self) -> (i64, i64) {
+        self.inner.range_del_v
+    }
+
+    #[setter]
+    fn set_range_del_j(&mut self, value: (i64, i64)) -> PyResult<()> {
+        self.inner.range_del_j = value;
+        self.inner.initialize()?;
+        Ok(())
+    }
+
+    #[getter]
+    fn get_range_del_j(&self) -> (i64, i64) {
+        self.inner.range_del_j
+    }
+
+    #[setter]
+    fn set_range_del_d3(&mut self, value: (i64, i64)) -> PyResult<()> {
+        self.inner.range_del_d3 = value;
+        self.inner.initialize()?;
+        Ok(())
+    }
+
+    #[getter]
+    fn get_range_del_d3(&self) -> (i64, i64) {
+        self.inner.range_del_d3
+    }
+
+    #[setter]
+    fn set_range_del_d5(&mut self, value: (i64, i64)) -> PyResult<()> {
+        self.inner.range_del_d5 = value;
+        self.inner.initialize()?;
+        Ok(())
+    }
+
+    #[getter]
+    fn get_range_del_d5(&self) -> (i64, i64) {
+        self.inner.range_del_d5
+    }
+
+    #[setter]
     fn set_p_del_v_given_v(&mut self, py: Python, value: Py<PyArray2<f64>>) -> PyResult<()> {
         self.inner.p_del_v_given_v = value.as_ref(py).to_owned_array();
         self.inner.initialize()?;

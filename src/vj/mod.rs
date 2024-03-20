@@ -170,6 +170,30 @@ impl PyModel {
         Ok(())
     }
 
+    #[setter]
+    fn set_range_del_v(&mut self, value: (i64, i64)) -> PyResult<()> {
+        self.inner.range_del_v = value;
+        self.inner.initialize()?;
+        Ok(())
+    }
+
+    #[getter]
+    fn get_range_del_v(&self) -> (i64, i64) {
+        self.inner.range_del_v
+    }
+
+    #[setter]
+    fn set_range_del_j(&mut self, value: (i64, i64)) -> PyResult<()> {
+        self.inner.range_del_j = value;
+        self.inner.initialize()?;
+        Ok(())
+    }
+
+    #[getter]
+    fn get_range_del_j(&self) -> (i64, i64) {
+        self.inner.range_del_j
+    }
+
     #[getter]
     fn get_p_v(&self, py: Python) -> Py<PyArray1<f64>> {
         self.inner.p_v.to_owned().into_pyarray(py).to_owned()
