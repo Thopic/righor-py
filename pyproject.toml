@@ -13,4 +13,3 @@ require-python = ">=3.7"
 features = ["pyo3/extension-module"]
 python-source = "python"
 module-name = "righor._righor"
-data = "righor"
