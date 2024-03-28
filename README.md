@@ -1,10 +1,9 @@
 ## Righor
 
-Companion to righor, to publish the python package. Install with pip install righor.
+Companion to righor, to publish the python package. Install with `pip install righor`.
 
-```py
 Load a model:
-
+```py
 import righor
 import matplotlib.pyplot as plt
 import seaborn
