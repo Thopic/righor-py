@@ -1,4 +1,5 @@
 import re
+import sys
 from pathlib import Path
 from righor import _righor
 
@@ -10,9 +11,11 @@ def load_model(species: str, chain: str, identifier=None):
     load_model("human", "tra") will load the default trb model
     """
     #    model_dir = .absolute().as_posix()
-    path_model = (Path(_righor.__file__).parent / Path("righor.data") / Path("data") / Path("models"))
+    ## very ugly but maturin seems to force that
+    venv_root = Path(sys.prefix)
+    path_model = venv_root / Path("righor_models")
     if not path_model.exists(): # local mode
-        path_model = (Path(_righor.__file__).parent.parent.parent / Path("righor.data") / Path("data") / Path("models"))
+        path_model = (Path(_righor.__file__).parent.parent.parent / Path("righor.data") / Path("data") / Path("righor_models"))
     if not path_model.exists():
         raise RuntimeError("Error with the installation. Data files not found.")
     model_dir = path_model.absolute().as_posix()
