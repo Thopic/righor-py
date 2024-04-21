@@ -9,7 +9,8 @@ use rayon::prelude::*;
 use righor::vdj::{
     display_j_alignment, display_v_alignment, Generator, Model, ResultInference, Sequence,
 };
-use righor::Gene;
+use righor::{Dna, Gene, Modelable};
+use std::fs;
 use std::path::Path;
 
 #[pyclass(name = "Model")]
@@ -21,6 +22,7 @@ pub struct PyModel {
 #[pymethods]
 impl PyModel {
     #[staticmethod]
+    /// Load the model based on species/chain/id names and location (model_dir)
     pub fn load_model(
         species: &str,
         chain: &str,
@@ -32,6 +34,7 @@ impl PyModel {
     }
 
     #[staticmethod]
+    /// Load the model from an igor-format save
     pub fn load_model_from_files(
         path_params: &str,
         path_marginals: &str,
@@ -45,6 +48,31 @@ impl PyModel {
             Path::new(path_anchor_jgene),
         )?;
         Ok(PyModel { inner: m })
+    }
+
+    /// Save the model in IGoR format: create a directory 'directory'
+    /// and four files that represents the model.
+    pub fn save_model(&self, directory: &str) -> Result<()> {
+        let path = Path::new(directory);
+        match fs::create_dir(path) {
+            Ok(_) => self.inner.save_model(path),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// Save the model in json format
+    pub fn save_json(&self, filename: &str) -> Result<()> {
+        let path = Path::new(filename);
+        self.inner.save_json(&path)
+    }
+
+    /// Save the model in json format
+    #[staticmethod]
+    pub fn load_json(filename: &str) -> Result<PyModel> {
+        let path = Path::new(filename);
+        Ok(PyModel {
+            inner: righor::vdj::Model::load_json(&path)?,
+        })
     }
 
     fn __deepcopy__(&self, _memo: &PyDict) -> Self {
@@ -64,12 +92,15 @@ impl PyModel {
         Generator::new(self.inner.clone(), seed, available_v, available_j)
     }
 
+    /// Return an uniform (blank slate) model with the same v/d/j genes
+    /// as the current model.
     pub fn uniform(&self) -> PyResult<PyModel> {
         Ok(PyModel {
             inner: self.inner.uniform()?,
         })
     }
 
+    /// Align one nucleotide sequence and return a `Sequence` object
     pub fn align_sequence(
         &self,
         dna_seq: &str,
@@ -80,6 +111,17 @@ impl PyModel {
         Ok(alignment)
     }
 
+    /// Given a cdr3 sequence + V/J genes return a `Sequence` object
+    pub fn align_cdr3(
+        &self,
+        cdr3_seq: Dna,
+        vgenes: Vec<Gene>,
+        jgenes: Vec<Gene>,
+    ) -> Result<Sequence> {
+        self.inner.align_from_cdr3(cdr3_seq, vgenes, jgenes)
+    }
+
+    /// Align multiple sequences (parallelized, so a bit faster than individual alignment)
     pub fn align_all_sequences(
         &self,
         dna_seqs: Vec<String>,
@@ -95,6 +137,8 @@ impl PyModel {
             .collect()
     }
 
+    /// Evaluate the sequence and return the most likely recombination scenario
+    /// as well as its probability of being generated.
     pub fn evaluate(
         &self,
         sequence: &Sequence,
@@ -103,6 +147,7 @@ impl PyModel {
         self.inner.evaluate(&sequence, inference_params)
     }
 
+    /// Run one round of expectation-maximization on the current model and return the next model.
     pub fn infer(
         &mut self,
         sequences: Vec<Sequence>,
