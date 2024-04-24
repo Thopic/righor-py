@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 name = "_righor"
 
 [dependencies]
-righor = {version = "0.2.2", default-features = false, features=['py_binds', 'pyo3']}
+righor = {path = "../righor", version = "0.2.2", default-features = false, features=['py_binds', 'pyo3']}
 anyhow = "1.0.76"
 pyo3 = {version = "0.20.3", features = ["extension-module", "anyhow", "multiple-pymethods"]}
 numpy = {version = "0.20"}
