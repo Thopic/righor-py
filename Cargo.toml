@@ -16,6 +16,7 @@ pyo3 = {version = "0.20.3", features = ["extension-module", "anyhow", "multiple-
 numpy = {version = "0.20"}
 approx = {version = "0.5.1"}
 rayon = "1.8.1"
+ndarray = {version="0.15", features = ["approx", "serde"]}
 
 [profile.release]
 opt-level = 3

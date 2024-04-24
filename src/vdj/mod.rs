@@ -2,6 +2,7 @@
 
 use crate::AlignmentParameters;
 use anyhow::{anyhow, Result};
+use ndarray::{s, Array2, Array3};
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -199,7 +200,41 @@ impl PyModel {
 
     #[setter]
     fn set_v_segments(&mut self, value: Vec<Gene>) -> Result<()> {
+        let [_, sd, sj] = *self.inner.p_vdj.shape() else {
+            return Err(anyhow!("Something is wrong with the v segments"));
+        };
+        let mut new_p_vdj = Array3::<f64>::zeros([value.len(), sd, sj]);
+
+        let [sdelv, _] = *self.inner.p_del_v_given_v.shape() else {
+            return Err(anyhow!("Something is wrong with the v segments"));
+        };
+        let mut new_p_del_v_given_v = Array2::<f64>::zeros([sdelv, value.len()]);
+
+        for (iv, v) in value.iter().enumerate() {
+            match self
+                .inner
+                .seg_vs
+                .iter()
+                .enumerate()
+                .find(|(_index, g)| g.name == v.name)
+            {
+                Some((index, _gene)) => {
+                    new_p_vdj
+                        .slice_mut(s![iv, .., ..])
+                        .assign(&self.inner.p_vdj.slice_mut(s![index, .., ..]));
+                    new_p_del_v_given_v
+                        .slice_mut(s![.., iv])
+                        .assign(&self.inner.p_del_v_given_v.slice_mut(s![.., index]));
+                }
+                None => {
+                    new_p_vdj.slice_mut(s![iv, .., ..]).fill(0.);
+                    new_p_del_v_given_v.slice_mut(s![.., iv]).fill(0.);
+                }
+            }
+        }
         self.inner.seg_vs = value;
+        self.inner.p_vdj = new_p_vdj;
+        self.inner.p_del_v_given_v = new_p_del_v_given_v;
         self.inner.initialize()?;
         Ok(())
     }
@@ -235,7 +270,41 @@ impl PyModel {
 
     #[setter]
     fn set_j_segments(&mut self, value: Vec<Gene>) -> Result<()> {
+        let [sv, sd, _] = *self.inner.p_vdj.shape() else {
+            return Err(anyhow!("Something is wrong with the j segments"));
+        };
+        let mut new_p_vdj = Array3::<f64>::zeros([sv, sd, value.len()]);
+
+        let [sdelj, _] = *self.inner.p_del_j_given_j.shape() else {
+            return Err(anyhow!("Something is wrong with the j segments"));
+        };
+        let mut new_p_del_j_given_j = Array2::<f64>::zeros([sdelj, value.len()]);
+
+        for (ij, j) in value.iter().enumerate() {
+            match self
+                .inner
+                .seg_js
+                .iter()
+                .enumerate()
+                .find(|(_index, g)| g.name == j.name)
+            {
+                Some((index, _gene)) => {
+                    new_p_vdj
+                        .slice_mut(s![.., .., ij])
+                        .assign(&self.inner.p_vdj.slice_mut(s![.., .., index]));
+                    new_p_del_j_given_j
+                        .slice_mut(s![.., ij])
+                        .assign(&self.inner.p_del_j_given_j.slice_mut(s![.., index]));
+                }
+                None => {
+                    new_p_vdj.slice_mut(s![.., .., ij]).fill(0.);
+                    new_p_del_j_given_j.slice_mut(s![.., ij]).fill(0.);
+                }
+            }
+        }
         self.inner.seg_js = value;
+        self.inner.p_vdj = new_p_vdj;
+        self.inner.p_del_j_given_j = new_p_del_j_given_j;
         self.inner.initialize()?;
         Ok(())
     }
