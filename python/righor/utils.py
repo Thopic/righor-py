@@ -43,18 +43,12 @@ import pandas as pd
             
     
 
-def extract_sequence_from_base(base, begin, end):
-    if begin < end:
-        return base[begin:end]
-    else:
-        return base[]
-
     
-@lru_cache(maxsize=None)
-def efetch(db:str, identifier:str):
-    handle = Entrez.efetch(db="nuccore", id=identifier,
-                           retmode="text", rettype="fasta")
-    return str(SeqIO.read(handle, 'fasta').seq)
+# @lru_cache(maxsize=None)
+# def efetch(db:str, identifier:str):
+#     handle = Entrez.efetch(db="nuccore", id=identifier,
+#                            retmode="text", rettype="fasta")
+#     return str(SeqIO.read(handle, 'fasta').seq)
     
 
 def load_model(species: str, chain: str, identifier=None):
