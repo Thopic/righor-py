@@ -185,7 +185,7 @@ impl PyModel {
         sequences: Vec<Sequence>,
         inference_params: &righor::InferenceParameters,
     ) -> Result<()> {
-        let alignments = sequences.into_iter().map(|s| s).collect();
+        let alignments = sequences.into_iter().map(|s| s).collect::<Vec<Sequence>>();
         let mut model = self.inner.clone();
         model.infer(&alignments, inference_params)?;
         self.inner = model.clone();
