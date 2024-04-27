@@ -7,9 +7,8 @@ use numpy::{IntoPyArray, PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use rayon::prelude::*;
-use righor::vdj::{
-    display_j_alignment, display_v_alignment, Generator, Model, ResultInference, Sequence,
-};
+use righor::shared::ResultInference;
+use righor::vdj::{display_j_alignment, display_v_alignment, Generator, Model, Sequence};
 use righor::{Dna, Gene, Modelable};
 use std::fs;
 use std::path::Path;
@@ -101,6 +100,36 @@ impl PyModel {
         })
     }
 
+    pub fn align_and_infer(
+        &mut self,
+        str_seqs: Vec<String>,
+        align_params: &righor::AlignmentParameters,
+        inference_params: &righor::InferenceParameters,
+    ) -> Result<()> {
+        let dna_seqs = str_seqs
+            .iter()
+            .map(|x| righor::Dna::from_string(x))
+            .collect::<Result<Vec<_>>>()?;
+        self.inner
+            .align_and_infer(&dna_seqs, align_params, inference_params)?;
+        Ok(())
+    }
+
+    pub fn align_and_infer_from_cdr3(
+        &mut self,
+        cdr3_seqs: Vec<(String, Vec<Gene>, Vec<Gene>)>,
+
+        inference_params: &righor::InferenceParameters,
+    ) -> Result<()> {
+        let dna_seqs = cdr3_seqs
+            .iter()
+            .map(|(x, v, j)| (righor::Dna::from_string(x).unwrap(), v.clone(), j.clone()))
+            .collect::<Vec<_>>();
+        self.inner
+            .align_and_infer_from_cdr3(&dna_seqs, inference_params)?;
+        Ok(())
+    }
+
     /// Align one nucleotide sequence and return a `Sequence` object
     pub fn align_sequence(
         &self,
@@ -108,7 +137,7 @@ impl PyModel {
         align_params: &AlignmentParameters,
     ) -> Result<Sequence> {
         let dna = righor::Dna::from_string(dna_seq)?;
-        let alignment = self.inner.align_sequence(dna, align_params)?;
+        let alignment = self.inner.align_sequence(&dna, align_params)?;
         Ok(alignment)
     }
 
@@ -119,7 +148,7 @@ impl PyModel {
         vgenes: Vec<Gene>,
         jgenes: Vec<Gene>,
     ) -> Result<Sequence> {
-        self.inner.align_from_cdr3(cdr3_seq, vgenes, jgenes)
+        self.inner.align_from_cdr3(&cdr3_seq, &vgenes, &jgenes)
     }
 
     /// Align multiple sequences (parallelized, so a bit faster than individual alignment)
@@ -132,7 +161,7 @@ impl PyModel {
             .par_iter()
             .map(|seq| {
                 let dna = righor::Dna::from_string(seq)?;
-                let alignment = self.inner.align_sequence(dna, align_params)?;
+                let alignment = self.inner.align_sequence(&dna, align_params)?;
                 Ok(alignment)
             })
             .collect()
@@ -508,7 +537,7 @@ impl PyModel {
             .features
             .clone()
             .ok_or(anyhow!("No feature data in this inference result."))?;
-        let model = self.inner.from_features(&feat)?;
+        let model = self.inner.from_features(&*feat)?;
         Ok(PyModel { inner: model })
     }
 }
