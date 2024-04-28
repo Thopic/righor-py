@@ -5,7 +5,7 @@ from righor import _righor
 import itertools
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import numpy as np
 
 
 def load_model(species: str, chain: str, identifier=None):
@@ -304,6 +304,115 @@ def plot_vdj(*args, plots_kws=None):
         )
         
     for ax in [ax_V, ax_D, ax_J]:
+        ylim = ax.get_ylim()
+        ylim = (max(ylim[0], 1e-6), ylim[1])
+        ax.set_ylim(ylim)
+
+    if 'label' in plots_kws[0]:
+        for ax in fig.axes:
+            ax.legend()
+        
+    return fig
+
+
+
+
+def plot_vj(*args, plots_kws=None):
+    """ Plot all the marginals of one or more VJ models.
+        The order of V/J genes is based on the first model. 
+        Arguments:
+        - *args: VJ model objects
+        - plots_kws: list of plot options for each model, in dict form
+        for ex: [{'label': 'my model', 'color': '#131313', ls: '-'}, ...]
+        Usage:
+        plot_vdj(model1, model2, model3, [{'label'='m1', 'color'='r'}, ('label'='m2', 'color'='b'}, {'label'='m3', 'color'='g'}])
+    """
+
+    fig = plt.figure(constrained_layout=True, figsize=(16,12))
+    gs = fig.add_gridspec(4, 2)
+    ax_V = fig.add_subplot(gs[0, :])
+    ax_J = fig.add_subplot(gs[1, :])
+    ax_delV = fig.add_subplot(gs[2, 0])
+    ax_delJ = fig.add_subplot(gs[2, 1])
+    ax_insVJ = fig.add_subplot(gs[3, 0])
+    ax_nucVJ = fig.add_subplot(gs[3, 1])
+
+    ax_V.set_xlabel('V genes')
+    ax_J.set_xlabel('J genes')
+    
+    for ax in [ax_V, ax_J]:
+        ax.set_yscale('log')
+        ax.tick_params(axis='x', labelrotation=90)
+    
+    ax_delV.set_xlabel('# V deletions')
+    ax_delJ.set_xlabel('# J deletions')
+    ax_insVJ.set_xlabel('# insertions between V and J')
+    ax_nucVJ.set_xlabel('nuc. transitions at VJ')
+    ax_nucVJ.tick_params(axis='x', labelrotation=90)
+    
+    # Group all the v_genes used in the model
+    # ignore the alleles 
+    all_v_genes = list(set([g.name.split('*')[0] for m in args for g in m.v_segments]))
+    all_j_genes = list(set([g.name.split('*')[0] for m in args for g in m.j_segments]))
+    order_vs = range(len(all_v_genes))
+    order_js = range(len(all_j_genes))
+
+    if plots_kws is None or len(plots_kws) != len(args):
+        plots_kws = [{} for m in args] 
+
+    for idx_model, (m, opt) in enumerate(zip(args, plots_kws)):
+        # for each V gene, compute P(V) for the V gene (ignoring alleles) 
+        proba_vs = m.p_vj.sum(axis=(1))
+        p_v_sans_alleles = np.zeros(len(all_v_genes))
+        for (v, pv) in zip(m.v_segments, proba_vs):
+            idx = [ii for (ii,vsansallele) in enumerate(all_v_genes) if vsansallele == v.name.split('*')[0]][0]
+            p_v_sans_alleles[idx] += pv
+
+        # fix the order based on the first element
+        if idx_model == 0:
+            order_vs = np.argsort(p_v_sans_alleles)[::-1]
+
+        ax_V.plot(np.array(all_v_genes)[order_vs], p_v_sans_alleles[order_vs], **opt)
+
+        # same for J
+        proba_js = m.p_vj.sum(axis=(0))
+        p_j_sans_alleles = np.zeros(len(all_j_genes))
+        for (j, pj) in zip(m.j_segments, proba_js):
+            idx = [ii for (ii,jsansallele) in enumerate(all_j_genes) if jsansallele == j.name.split('*')[0]][0]
+            p_j_sans_alleles[idx] += pj
+
+        # fix the order based on the first element
+        if idx_model == 0:
+            order_js = np.argsort(p_j_sans_alleles)[::-1]
+
+        ax_J.plot(np.array(all_j_genes)[order_js], p_j_sans_alleles[order_js], **opt)
+
+        
+        # Now the deletions
+        ax_delV.plot(
+            range(m.range_del_v[0], m.range_del_v[1]+1),
+            m.p_del_v_given_v.sum(axis=1), **opt
+        )
+        
+        ax_delJ.plot(
+            range(m.range_del_j[0], m.range_del_j[1]+1),
+            m.p_del_j_given_j.sum(axis=1), **opt
+        )
+
+        
+        # And the insertions
+        ax_insVJ.plot(
+            range(0, m.p_ins_vj.shape[0]),
+            m.p_ins_vj, **opt
+        )
+    
+        ax_nucVJ.scatter(
+            [f'{a}→{b}' for a in 'ACGT' for b in 'ACGT'],
+            m.markov_coefficients_vj.flatten(), **opt
+        )
+        
+        
+    for ax in [ax_V, ax_J]:
         ylim = ax.get_ylim()
         ylim = (max(ylim[0], 1e-6), ylim[1])
         ax.set_ylim(ylim)
