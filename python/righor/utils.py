@@ -165,7 +165,6 @@ def igor_genes(chain: str, gene_type: str, model):
         
     return lst
 
-
 def plot_vdj(*args, plots_kws=None):
     """ Plot all the marginals of one or more VDJ models.
         The order of V/D/J genes is based on the first model. 
@@ -389,17 +388,16 @@ def plot_vj(*args, plots_kws=None):
         ax_J.plot(np.array(all_j_genes)[order_js], p_j_sans_alleles[order_js], **opt)
 
         
-        # Now the deletions
+         # Now the deletions
         ax_delV.plot(
             range(m.range_del_v[0], m.range_del_v[1]+1),
-            m.p_del_v_given_v.sum(axis=1), **opt
+            m.p_del_v_given_v@m.p_vj.sum(axis=(1)), **opt
         )
         
         ax_delJ.plot(
             range(m.range_del_j[0], m.range_del_j[1]+1),
-            m.p_del_j_given_j.sum(axis=1), **opt
+            m.p_del_j_given_j@m.p_vj.sum(axis=(0)), **opt
         )
-
         
         # And the insertions
         ax_insVJ.plot(

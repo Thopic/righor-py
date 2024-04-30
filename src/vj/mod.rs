@@ -1,12 +1,12 @@
 //! py-binding for the VJ model
 
 use anyhow::{anyhow, Result};
-use ndarray::{s, Array2};
+use ndarray::{s, Array2, Axis};
 use numpy::{IntoPyArray, PyArray1, PyArray2};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use rayon::prelude::*;
-use righor::shared::ResultInference;
+use righor::shared::{utils::Normalize, utils::Normalize2, ResultInference};
 use righor::vdj::{display_j_alignment, display_v_alignment, Sequence};
 use righor::vj::Generator;
 use righor::vj::Model;
@@ -229,6 +229,7 @@ impl PyModel {
     }
 
     #[setter]
+    /// Update the v segments and adapt the associated marginals
     fn set_v_segments(&mut self, value: Vec<Gene>) -> Result<()> {
         let [_, sj] = *self.inner.get_p_vj().shape() else {
             return Err(anyhow!("Something is wrong with the v segments"));
@@ -239,6 +240,10 @@ impl PyModel {
             return Err(anyhow!("Something is wrong with the v segments"));
         };
         let mut new_p_del_v_given_v = Array2::<f64>::zeros([sdelv, value.len()]);
+
+        let proba_v_default = 1. / (value.len() as f64);
+        let delv_default =
+            self.inner.p_del_v_given_v.sum_axis(Axis(1)) / self.inner.p_del_v_given_v.sum();
 
         for (iv, v) in value.iter().enumerate() {
             match self
@@ -257,11 +262,18 @@ impl PyModel {
                         .assign(&self.inner.p_del_v_given_v.slice_mut(s![.., index]));
                 }
                 None => {
-                    new_p_vj.slice_mut(s![iv, ..]).fill(0.);
-                    new_p_del_v_given_v.slice_mut(s![.., iv]).fill(0.);
+                    new_p_vj.slice_mut(s![iv, ..]).fill(proba_v_default);
+                    new_p_del_v_given_v
+                        .slice_mut(s![.., iv])
+                        .assign(&delv_default);
                 }
             }
         }
+
+        // normalzie
+        new_p_vj = new_p_vj.normalize_distribution_double()?;
+        new_p_del_v_given_v = new_p_del_v_given_v.normalize_distribution()?;
+
         self.inner.seg_vs = value;
         self.inner.set_p_vj(&new_p_vj)?;
         self.inner.p_del_v_given_v = new_p_del_v_given_v;
@@ -275,6 +287,7 @@ impl PyModel {
     }
 
     #[setter]
+    /// Update the j segments and adapt the associated marginals
     fn set_j_segments(&mut self, value: Vec<Gene>) -> Result<()> {
         let [sv, _] = *self.inner.get_p_vj().shape() else {
             return Err(anyhow!("Something is wrong with the j segments"));
@@ -285,6 +298,10 @@ impl PyModel {
             return Err(anyhow!("Something is wrong with the j segments"));
         };
         let mut new_p_del_j_given_j = Array2::<f64>::zeros([sdelj, value.len()]);
+
+        let proba_j_default = 1. / (value.len() as f64);
+        let delj_default =
+            self.inner.p_del_j_given_j.sum_axis(Axis(1)) / self.inner.p_del_j_given_j.sum();
 
         for (ij, j) in value.iter().enumerate() {
             match self
@@ -303,11 +320,18 @@ impl PyModel {
                         .assign(&self.inner.p_del_j_given_j.slice_mut(s![.., index]));
                 }
                 None => {
-                    new_p_vj.slice_mut(s![.., ij]).fill(0.);
-                    new_p_del_j_given_j.slice_mut(s![.., ij]).fill(0.);
+                    new_p_vj.slice_mut(s![.., ij]).fill(proba_j_default);
+                    new_p_del_j_given_j
+                        .slice_mut(s![.., ij])
+                        .assign(&delj_default);
                 }
             }
         }
+
+        // normalzie
+        new_p_vj = new_p_vj.normalize_distribution_double()?;
+        new_p_del_j_given_j = new_p_del_j_given_j.normalize_distribution()?;
+
         self.inner.seg_js = value;
         self.inner.set_p_vj(&new_p_vj)?;
         self.inner.p_del_j_given_j = new_p_del_j_given_j;
