@@ -101,18 +101,19 @@ impl PyModel {
         })
     }
 
+    #[pyo3(signature = (str_seqs, align_params=righor::AlignmentParameters::default_evaluate(), inference_params=righor::InferenceParameters::default_evaluate()))]
     pub fn align_and_infer(
         &mut self,
         str_seqs: Vec<String>,
-        align_params: &righor::AlignmentParameters,
-        inference_params: &righor::InferenceParameters,
+        align_params: righor::AlignmentParameters,
+        inference_params: righor::InferenceParameters,
     ) -> Result<()> {
         let dna_seqs = str_seqs
             .iter()
             .map(|x| righor::Dna::from_string(x))
             .collect::<Result<Vec<_>>>()?;
         self.inner
-            .align_and_infer(&dna_seqs, align_params, inference_params)?;
+            .align_and_infer(&dna_seqs, &align_params, &inference_params)?;
         Ok(())
     }
 
@@ -168,25 +169,29 @@ impl PyModel {
             .collect()
     }
 
+    #[pyo3(signature = (sequence, align_params=righor::AlignmentParameters::default_evaluate(), infer_params=righor::InferenceParameters::default_evaluate()))]
     /// Evaluate the sequence and return the most likely recombination scenario
     /// as well as its probability of being generated.
     pub fn evaluate(
         &self,
-        sequence: &Sequence,
-        inference_params: &righor::InferenceParameters,
+        sequence: String,
+        align_params: righor::AlignmentParameters,
+        infer_params: righor::InferenceParameters,
     ) -> Result<ResultInference> {
-        self.inner.evaluate(&sequence, inference_params)
+        let al = self.align_sequence(&sequence, &align_params)?;
+        self.inner.evaluate(&al, &infer_params)
     }
 
+    #[pyo3(signature = (sequences, inference_params=righor::InferenceParameters::default()))]
     /// Run one round of expectation-maximization on the current model and return the next model.
     pub fn infer(
         &mut self,
         sequences: Vec<Sequence>,
-        inference_params: &righor::InferenceParameters,
+        inference_params: righor::InferenceParameters,
     ) -> Result<()> {
         let alignments = sequences.into_iter().map(|s| s).collect::<Vec<Sequence>>();
         let mut model = self.inner.clone();
-        model.infer(&alignments, inference_params)?;
+        model.infer(&alignments, &inference_params)?;
         self.inner = model.clone();
         Ok(())
     }

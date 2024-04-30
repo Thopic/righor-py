@@ -133,14 +133,15 @@ impl PyModel {
         })
     }
 
+    #[pyo3(signature = (dna_seq, align_params=righor::AlignmentParameters::default()))]
     /// Align one nucleotide sequence and return a `Sequence` object
     pub fn align_sequence(
         &self,
         dna_seq: &str,
-        align_params: &righor::AlignmentParameters,
+        align_params: righor::AlignmentParameters,
     ) -> Result<Sequence> {
         let dna = righor::Dna::from_string(dna_seq)?;
-        let alignment = self.inner.align_sequence(&dna, align_params)?;
+        let alignment = self.inner.align_sequence(&dna, &align_params)?;
         Ok(alignment)
     }
 
@@ -159,18 +160,19 @@ impl PyModel {
         Ok(())
     }
 
+    #[pyo3(signature = (cdr3_seqs, inference_params=righor::InferenceParameters::default()))]
     pub fn align_and_infer_from_cdr3(
         &mut self,
         cdr3_seqs: Vec<(String, Vec<Gene>, Vec<Gene>)>,
 
-        inference_params: &righor::InferenceParameters,
+        inference_params: righor::InferenceParameters,
     ) -> Result<()> {
         let dna_seqs = cdr3_seqs
             .iter()
             .map(|(x, v, j)| (righor::Dna::from_string(x).unwrap(), v.clone(), j.clone()))
             .collect::<Vec<_>>();
         self.inner
-            .align_and_infer_from_cdr3(&dna_seqs, inference_params)?;
+            .align_and_infer_from_cdr3(&dna_seqs, &inference_params)?;
         Ok(())
     }
 
@@ -200,25 +202,29 @@ impl PyModel {
             .collect()
     }
 
+    #[pyo3(signature = (sequence, align_params=righor::AlignmentParameters::default_evaluate(), infer_params=righor::InferenceParameters::default_evaluate()))]
     /// Evaluate the sequence and return the most likely recombination scenario
     /// as well as its probability of being generated.
     pub fn evaluate(
         &self,
-        sequence: &Sequence,
-        inference_params: &righor::InferenceParameters,
+        sequence: String,
+        align_params: righor::AlignmentParameters,
+        infer_params: righor::InferenceParameters,
     ) -> Result<ResultInference> {
-        Ok(self.inner.evaluate(&sequence, inference_params)?)
+        let al = self.align_sequence(&sequence, align_params)?;
+        Ok(self.inner.evaluate(&al, &infer_params)?)
     }
 
-    /// Run one round of expectation-maximization on the current model and return the next model.
+    #[pyo3(signature = (sequences, inference_params=righor::InferenceParameters::default()))]
+    /// Run one round of expectation-maximization on the current model and update it.
     pub fn infer(
         &mut self,
         sequences: Vec<Sequence>,
-        inference_params: &righor::InferenceParameters,
+        inference_params: righor::InferenceParameters,
     ) -> Result<()> {
         let alignments = sequences.into_iter().map(|s| s).collect::<Vec<Sequence>>();
         let mut model = self.inner.clone();
-        model.infer(&alignments, inference_params)?;
+        model.infer(&alignments, &inference_params)?;
         self.inner = model.clone();
         Ok(())
     }
