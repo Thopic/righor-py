@@ -6,6 +6,8 @@ import itertools
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import olga
+
 
 
 def load_model(species: str, chain: str, identifier=None):

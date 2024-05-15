@@ -15,8 +15,9 @@ fn righor_py(py: Python<'_>, m: &PyModule) -> PyResult<()> {
     let vj_submod = PyModule::new(py, "vj")?;
     vdj_submod.add_class::<vdj::PyModel>()?;
     vj_submod.add_class::<vj::PyModel>()?;
-    m.add_class::<righor::vdj::GenerationResult>()?;
+    m.add_class::<righor::shared::GenerationResult>()?;
     m.add_class::<righor::vdj::Sequence>()?;
+    m.add_class::<righor::shared::errors::PyErrorParameters>()?;
     m.add_class::<righor::Gene>()?;
     m.add_class::<righor::Dna>()?;
     m.add_class::<righor::AminoAcid>()?;

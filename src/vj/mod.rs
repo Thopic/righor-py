@@ -6,6 +6,7 @@ use numpy::{IntoPyArray, PyArray1, PyArray2};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use rayon::prelude::*;
+use righor::shared::errors::PyErrorParameters;
 use righor::shared::{utils::Normalize, utils::Normalize2, ResultInference};
 use righor::vdj::{display_j_alignment, display_v_alignment, Sequence};
 use righor::vj::Generator;
@@ -461,13 +462,15 @@ impl PyModel {
     }
 
     #[getter]
-    fn get_error_rate(&self) -> f64 {
-        self.inner.error_rate
+    fn get_error(&self) -> PyErrorParameters {
+        PyErrorParameters {
+            s: self.inner.error.clone(),
+        }
     }
 
     #[setter]
-    fn set_error_rate(&mut self, value: f64) -> Result<()> {
-        self.inner.error_rate = value;
+    fn set_error(&mut self, value: PyErrorParameters) -> Result<()> {
+        self.inner.error = value.s;
         self.inner.initialize()?;
         Ok(())
     }

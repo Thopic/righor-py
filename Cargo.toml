@@ -1,6 +1,6 @@
 [package]
 name = "righor_py"
-version = "0.2.8"
+version = "0.2.8-dev"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 name = "_righor"
 
 [dependencies]
-righor = {version = "0.2.3", default-features = false, features=['py_binds', 'pyo3']}
+righor = {path = "../righor", version = "0.2.3", default-features = false, features=['py_binds', 'pyo3']}
 anyhow = "1.0.76"
 pyo3 = {version = "0.20.3", features = ["extension-module", "anyhow", "multiple-pymethods"]}
 numpy = {version = "0.20"}

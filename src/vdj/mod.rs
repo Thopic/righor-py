@@ -7,7 +7,9 @@ use numpy::{IntoPyArray, PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use rayon::prelude::*;
+use righor::shared::errors::PyErrorParameters;
 use righor::shared::utils::{Normalize, Normalize2, Normalize3};
+use righor::shared::ModelStructure;
 use righor::shared::ResultInference;
 use righor::vdj::{display_j_alignment, display_v_alignment, Generator, Model, Sequence};
 use righor::{Dna, Gene, Modelable};
@@ -229,6 +231,16 @@ impl PyModel {
     }
 
     #[getter]
+    fn get_model_type(&self) -> ModelStructure {
+        self.inner.model_type.to_owned()
+    }
+
+    #[setter]
+    fn set_model_type(&mut self, value: ModelStructure) {
+        self.inner.model_type = value.clone();
+    }
+
+    #[getter]
     fn get_v_segments(&self) -> Vec<Gene> {
         self.inner.seg_vs.to_owned()
     }
@@ -287,13 +299,15 @@ impl PyModel {
     }
 
     #[getter]
-    fn get_error_rate(&self) -> f64 {
-        self.inner.error_rate
+    fn get_error(&self) -> PyErrorParameters {
+        PyErrorParameters {
+            s: self.inner.error.clone(),
+        }
     }
 
     #[setter]
-    fn set_error_rate(&mut self, value: f64) -> Result<()> {
-        self.inner.error_rate = value;
+    fn set_error(&mut self, value: PyErrorParameters) -> Result<()> {
+        self.inner.error = value.s;
         self.inner.initialize()?;
         Ok(())
     }
@@ -620,7 +634,7 @@ impl PyModel {
             .features
             .clone()
             .ok_or(anyhow!("No feature data in this inference result."))?;
-        let model = self.inner.from_features(&*feat)?;
+        let model = self.inner.from_features(&feat)?;
         Ok(PyModel { inner: model })
     }
 }
