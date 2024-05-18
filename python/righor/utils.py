@@ -7,6 +7,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import olga
+import os
+
+
+def fix_number_threads(num_threads):
+    os.environ["RAYON_NUM_THREADS"] = f"{num_threads}"
 
 
 
@@ -307,7 +312,7 @@ def plot_vdj(*args, plots_kws=None):
         
     for ax in [ax_V, ax_D, ax_J]:
         ylim = ax.get_ylim()
-        ylim = (max(ylim[0], 1e-6), ylim[1])
+        ylim = (max(ylim[0], 1e-6), 1.)
         ax.set_ylim(ylim)
 
     if 'label' in plots_kws[0]:
