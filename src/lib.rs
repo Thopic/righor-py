@@ -589,6 +589,7 @@ fn righor_py(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<righor::Gene>()?;
     m.add_class::<righor::Dna>()?;
     m.add_class::<righor::AminoAcid>()?;
+    m.add_class::<righor::shared::ModelStructure>()?;
     m.add_class::<InferenceParameters>()?;
     m.add_class::<AlignmentParameters>()?;
     Ok(())
