@@ -1,16 +1,16 @@
+use anyhow::Context;
 use anyhow::{anyhow, Result};
 use numpy::IntoPyArray;
 use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use rayon::prelude::*;
 use righor::shared::model::*;
 use righor::shared::VJAlignment;
 use righor::shared::{errors::PyErrorParameters, Features};
-use righor::shared::{Dna, Gene};
+pub use righor::shared::{AminoAcid, Dna, DnaLike, Gene};
 use righor::vdj::model::EntrySequence;
 use righor::vdj::Sequence;
-
-use rayon::prelude::*;
 
 use std::fs;
 use std::path::Path;
@@ -155,14 +155,22 @@ impl PyModel {
             if let Ok(seq) = seqs.extract::<Vec<String>>() {
                 return seq
                     .into_iter()
-                    .map(|x| Ok(EntrySequence::NucleotideSequence(Dna::from_string(&x)?)))
+                    .map(|x| {
+                        Ok(EntrySequence::NucleotideSequence(DnaLike::from_dna(
+                            Dna::from_string(&x)?,
+                        )))
+                    })
                     .collect::<Result<Vec<_>>>();
             }
             if let Ok(seq) = seqs.extract::<Vec<(String, Vec<Gene>, Vec<Gene>)>>() {
                 return seq
                     .into_iter()
                     .map(|(x, v, j)| {
-                        Ok(EntrySequence::NucleotideCDR3((Dna::from_string(&x)?, v, j)))
+                        Ok(EntrySequence::NucleotideCDR3((
+                            DnaLike::from_dna(Dna::from_string(&x)?),
+                            v,
+                            j,
+                        )))
                     })
                     .collect::<Result<Vec<_>>>();
             }
@@ -187,8 +195,8 @@ impl PyModel {
         seq: &str,
         align_params: &AlignmentParameters,
     ) -> Result<Sequence> {
-        let dna = righor::shared::Dna::from_string(seq)?;
-        let alignment = self.inner.align_sequence(&dna, align_params)?;
+        let dna = DnaLike::from_dna(Dna::from_string(seq)?);
+        let alignment = self.inner.align_sequence(dna, align_params)?;
         Ok(alignment)
     }
 
@@ -199,7 +207,8 @@ impl PyModel {
         vgenes: Vec<Gene>,
         jgenes: Vec<Gene>,
     ) -> Result<Sequence> {
-        self.inner.align_from_cdr3(&cdr3_seq, &vgenes, &jgenes)
+        self.inner
+            .align_from_cdr3(&DnaLike::from_dna(cdr3_seq), &vgenes, &jgenes)
     }
 
     /// Align multiple sequences (parallelized, so a bit faster than individual alignment)
@@ -211,8 +220,8 @@ impl PyModel {
         dna_seqs
             .par_iter()
             .map(|seq| {
-                let dna = righor::shared::Dna::from_string(seq)?;
-                let alignment = self.inner.align_sequence(&dna, align_params)?;
+                let dna = DnaLike::from_dna(Dna::from_string(seq)?);
+                let alignment = self.inner.align_sequence(dna, align_params)?;
                 Ok(alignment)
             })
             .collect()
@@ -233,12 +242,30 @@ impl PyModel {
                 return Ok(EntrySequence::Aligned(s));
             }
             if let Ok(s) = sequence.extract::<String>() {
-                return Ok(EntrySequence::NucleotideSequence(Dna::from_string(&s)?));
+                return Ok(EntrySequence::NucleotideSequence(DnaLike::from_dna(
+                    Dna::from_string(&s).context("The sequence is not a valid DNA sequence. If it's an amino-acid sequence use evaluate(righor.AminoAcid(\"CAW\"), ...) instead.")?,
+                )));
             }
             if let Ok((s, v, j)) = sequence.extract::<(String, Vec<Gene>, Vec<Gene>)>() {
-                return Ok(EntrySequence::NucleotideCDR3((Dna::from_string(&s)?, v, j)));
+                return Ok(EntrySequence::NucleotideCDR3((
+                    DnaLike::from_dna(Dna::from_string(&s).context("The sequence is not a valid DNA sequence. If it's an amino-acid sequence use evaluate(righor.AminoAcid(\"CAW\"), ...) instead.")
+
+		    ?),
+                    v,
+                    j,
+                )));
             }
-            Err(anyhow!("The sequence does not match any known types, available types are `Sequence`, `str` and `(str, [Gene], [Gene])`"))
+            if let Ok((s, v, j)) = sequence.extract::<(AminoAcid, Vec<Gene>, Vec<Gene>)>() {
+                return Ok(EntrySequence::NucleotideCDR3((
+                    DnaLike::from_amino_acid(s),
+                    v,
+                    j,
+                )));
+            }
+            if let Ok((s, v, j)) = sequence.extract::<(Dna, Vec<Gene>, Vec<Gene>)>() {
+                return Ok(EntrySequence::NucleotideCDR3((DnaLike::from_dna(s), v, j)));
+            }
+            Err(anyhow!(""))
         })();
 
         if opt_esequence.is_ok() {
@@ -248,6 +275,9 @@ impl PyModel {
                 .evaluate(esequence, &align_params, &infer_params)?
                 .into_py(py));
         }
+
+        // If this doesn't work we now try with a vector of sequences
+
         let opt_esequence_vec: Result<Vec<EntrySequence>> = (|| {
             if let Ok(seq) = sequence.extract::<Vec<Sequence>>() {
                 return seq
@@ -258,26 +288,61 @@ impl PyModel {
             if let Ok(seq) = sequence.extract::<Vec<String>>() {
                 return seq
                     .into_iter()
-                    .map(|x| Ok(EntrySequence::NucleotideSequence(Dna::from_string(&x)?)))
+                    .map(|x| {
+                        Ok(EntrySequence::NucleotideSequence(DnaLike::from_dna(
+                            Dna::from_string(&x).context("The sequence is not a valid DNA sequence. If it's a list of amino-acid sequences use evaluate([righor.AminoAcid(\"CAW\"), ...], ...) instead.")?,
+                        )))
+                    })
                     .collect::<Result<Vec<_>>>();
             }
             if let Ok(seq) = sequence.extract::<Vec<(String, Vec<Gene>, Vec<Gene>)>>() {
                 return seq
                     .into_iter()
                     .map(|(x, v, j)| {
-                        Ok(EntrySequence::NucleotideCDR3((Dna::from_string(&x)?, v, j)))
+                        Ok(EntrySequence::NucleotideCDR3((
+                            DnaLike::from_dna(Dna::from_string(&x).context("The sequence is not a valid DNA sequence. If it's a list of amino-acid sequences use evaluate([righor.AminoAcid(\"CAFW\"),..], ...) instead.")?),
+                            v,
+			    j,
+                        )))
                     })
                     .collect::<Result<Vec<_>>>();
             }
-            Err(anyhow!("The sequence does not match any known types, available types are `Sequence`, `str` and `(str, [Gene], [Gene])` or list of these"))
+            if let Ok(seq) = sequence.extract::<Vec<(AminoAcid, Vec<Gene>, Vec<Gene>)>>() {
+                return seq
+                    .into_iter()
+                    .map(|(x, v, j)| {
+                        Ok(EntrySequence::NucleotideCDR3((
+                            DnaLike::from_amino_acid(x),
+                            v,
+                            j,
+                        )))
+                    })
+                    .collect::<Result<Vec<_>>>();
+            }
+            if let Ok(seq) = sequence.extract::<Vec<(Dna, Vec<Gene>, Vec<Gene>)>>() {
+                return seq
+                    .into_iter()
+                    .map(|(x, v, j)| {
+                        Ok(EntrySequence::NucleotideCDR3((DnaLike::from_dna(x), v, j)))
+                    })
+                    .collect::<Result<Vec<_>>>();
+            }
+
+            Err(anyhow!(""))
         })();
 
-        let vec_sequences = opt_esequence_vec?;
-        Ok(vec_sequences
-            .into_par_iter()
-            .map(|seq| self.inner.evaluate(seq, &align_params, &infer_params))
-            .collect::<Result<Vec<_>>>()?
-            .into_py(py))
+        if opt_esequence_vec.is_ok() {
+            return Ok(opt_esequence_vec
+                .unwrap()
+                .into_par_iter()
+                .map(|seq| self.inner.evaluate(seq, &align_params, &infer_params))
+                .collect::<Result<Vec<_>>>()?
+                .into_py(py));
+        }
+
+        let combined_error = anyhow!("The sequence does not match any known types, available types are `Sequence`, `str` and `(str/Dna/AminoAcid, [Gene], [Gene])` or list of these. {}. {}",
+                                         opt_esequence.unwrap_err(), opt_esequence_vec.unwrap_err());
+        Err(combined_error)
     }
 
     /// Recreate the full sequence from the CDR3/vgene/jgene
@@ -588,6 +653,7 @@ fn righor_py(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<righor::shared::errors::PyErrorParameters>()?;
     m.add_class::<righor::Gene>()?;
     m.add_class::<righor::Dna>()?;
+    m.add_class::<righor::shared::DnaLike>()?;
     m.add_class::<righor::AminoAcid>()?;
     m.add_class::<righor::shared::ModelStructure>()?;
     m.add_class::<InferenceParameters>()?;
