@@ -1,6 +1,6 @@
 use anyhow::Context;
 use anyhow::{anyhow, Result};
-use numpy::IntoPyArray;
+use numpy::{IntoPyArray, PyArrayMethods};
 use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -89,7 +89,7 @@ impl PyModel {
         })
     }
 
-    fn __deepcopy__(&self, _memo: &PyDict) -> Self {
+    fn __deepcopy__(&self, _memo: &Bound<'_, PyDict>) -> Self {
         self.clone()
     }
 
@@ -141,7 +141,7 @@ impl PyModel {
     /// Infer the model. str_seqs can be either a list of aligned sequences, a list of nucleotide sequences or a list of (cdr3, V, J) sequences.
     pub fn infer(
         &mut self,
-        seqs: &PyAny,
+        seqs: &Bound<'_, PyAny>,
         align_params: righor::shared::AlignmentParameters,
         inference_params: righor::shared::InferenceParameters,
     ) -> Result<()> {
@@ -233,7 +233,7 @@ impl PyModel {
     pub fn evaluate(
         &self,
         py: Python,
-        sequence: &PyAny,
+        sequence: &Bound<'_, PyAny>,
         align_params: righor::shared::AlignmentParameters,
         infer_params: righor::shared::InferenceParameters,
     ) -> Result<PyObject> {
@@ -437,7 +437,11 @@ impl PyModel {
     }
     #[getter]
     pub fn get_p_v(&self, py: Python) -> Py<PyArray1<f64>> {
-        self.inner.get_p_v().to_owned().into_pyarray(py).to_owned()
+        self.inner
+            .get_p_v()
+            .to_owned()
+            .into_pyarray_bound(py)
+            .into()
     }
     #[getter]
     pub fn get_p_vdj(&self, py: Python) -> Result<Py<PyArray3<f64>>> {
@@ -445,12 +449,12 @@ impl PyModel {
             .inner
             .get_p_vdj()?
             .to_owned()
-            .into_pyarray(py)
-            .to_owned())
+            .into_pyarray_bound(py)
+            .into())
     }
     #[setter]
     pub fn set_p_vdj(&mut self, py: Python, value: Py<PyArray3<f64>>) -> Result<()> {
-        self.inner.set_p_vdj(value.as_ref(py).to_owned_array())
+        self.inner.set_p_vdj(value.bind(py).to_owned_array())
     }
     #[getter]
     pub fn get_p_ins_vd(&self, py: Python) -> Result<Py<PyArray1<f64>>> {
@@ -458,8 +462,8 @@ impl PyModel {
             .inner
             .get_p_ins_vd()?
             .to_owned()
-            .into_pyarray(py)
-            .to_owned())
+            .into_pyarray_bound(py)
+            .into())
     }
     #[getter]
     pub fn get_p_ins_dj(&self, py: Python) -> Result<Py<PyArray1<f64>>> {
@@ -467,8 +471,8 @@ impl PyModel {
             .inner
             .get_p_ins_dj()?
             .to_owned()
-            .into_pyarray(py)
-            .to_owned())
+            .into_pyarray_bound(py)
+            .into())
     }
     #[getter]
     pub fn get_p_ins_vj(&self, py: Python) -> Result<Py<PyArray1<f64>>> {
@@ -476,16 +480,16 @@ impl PyModel {
             .inner
             .get_p_ins_vj()?
             .to_owned()
-            .into_pyarray(py)
-            .to_owned())
+            .into_pyarray_bound(py)
+            .into())
     }
     #[getter]
     pub fn get_p_del_v_given_v(&self, py: Python) -> Py<PyArray2<f64>> {
         self.inner
             .get_p_del_v_given_v()
             .to_owned()
-            .into_pyarray(py)
-            .to_owned()
+            .into_pyarray_bound(py)
+            .into()
     }
     #[setter]
     pub fn set_range_del_v(&mut self, value: (i64, i64)) -> Result<()> {
@@ -522,20 +526,20 @@ impl PyModel {
     #[setter]
     pub fn set_p_del_v_given_v(&mut self, py: Python, value: Py<PyArray2<f64>>) -> Result<()> {
         self.inner
-            .set_p_del_v_given_v(value.as_ref(py).to_owned_array())
+            .set_p_del_v_given_v(value.bind(py).to_owned_array())
     }
     #[getter]
     pub fn get_p_del_j_given_j(&self, py: Python) -> Py<PyArray2<f64>> {
         self.inner
             .get_p_del_j_given_j()
             .to_owned()
-            .into_pyarray(py)
-            .to_owned()
+            .into_pyarray_bound(py)
+            .into()
     }
     #[setter]
     pub fn set_p_del_j_given_j(&mut self, py: Python, value: Py<PyArray2<f64>>) -> Result<()> {
         self.inner
-            .set_p_del_j_given_j(value.as_ref(py).to_owned_array())
+            .set_p_del_j_given_j(value.bind(py).to_owned_array())
     }
     #[getter]
     pub fn get_p_del_d5_del_d3(&self, py: Python) -> Result<Py<PyArray3<f64>>> {
@@ -543,13 +547,13 @@ impl PyModel {
             .inner
             .get_p_del_d5_del_d3()?
             .to_owned()
-            .into_pyarray(py)
-            .to_owned())
+            .into_pyarray_bound(py)
+            .into())
     }
     #[setter]
     pub fn set_p_del_d5_del_d3(&mut self, py: Python, value: Py<PyArray2<f64>>) -> Result<()> {
         self.inner
-            .set_p_del_d5_del_d3(value.as_ref(py).to_owned_array())
+            .set_p_del_d5_del_d3(value.bind(py).to_owned_array())
     }
     #[getter]
     pub fn get_markov_coefficients_vd(&self, py: Python) -> Result<Py<PyArray2<f64>>> {
@@ -557,8 +561,8 @@ impl PyModel {
             .inner
             .get_markov_coefficients_vd()?
             .to_owned()
-            .into_pyarray(py)
-            .to_owned())
+            .into_pyarray_bound(py)
+            .into())
     }
     #[setter]
     pub fn set_markov_coefficients_vd(
@@ -567,7 +571,7 @@ impl PyModel {
         value: Py<PyArray2<f64>>,
     ) -> Result<()> {
         self.inner
-            .set_markov_coefficients_vd(value.as_ref(py).to_owned_array())
+            .set_markov_coefficients_vd(value.bind(py).to_owned_array())
     }
     #[getter]
     pub fn get_markov_coefficients_dj(&self, py: Python) -> Result<Py<PyArray2<f64>>> {
@@ -575,8 +579,8 @@ impl PyModel {
             .inner
             .get_markov_coefficients_dj()?
             .to_owned()
-            .into_pyarray(py)
-            .to_owned())
+            .into_pyarray_bound(py)
+            .into())
     }
     #[setter]
     pub fn set_markov_coefficients_dj(
@@ -585,7 +589,7 @@ impl PyModel {
         value: Py<PyArray2<f64>>,
     ) -> Result<()> {
         self.inner
-            .set_markov_coefficients_dj(value.as_ref(py).to_owned_array())
+            .set_markov_coefficients_dj(value.bind(py).to_owned_array())
     }
     #[getter]
     pub fn get_markov_coefficients_vj(&self, py: Python) -> Result<Py<PyArray2<f64>>> {
@@ -593,8 +597,8 @@ impl PyModel {
             .inner
             .get_markov_coefficients_vj()?
             .to_owned()
-            .into_pyarray(py)
-            .to_owned())
+            .into_pyarray_bound(py)
+            .into())
     }
     #[setter]
     pub fn set_markov_coefficients_vj(
@@ -603,7 +607,7 @@ impl PyModel {
         value: Py<PyArray2<f64>>,
     ) -> Result<()> {
         self.inner
-            .set_markov_coefficients_vj(value.as_ref(py).to_owned_array())
+            .set_markov_coefficients_vj(value.bind(py).to_owned_array())
     }
     #[getter]
     pub fn get_first_nt_bias_ins_vj(&self, py: Python) -> Result<Py<PyArray1<f64>>> {
@@ -611,8 +615,8 @@ impl PyModel {
             .inner
             .get_first_nt_bias_ins_vj()?
             .to_owned()
-            .into_pyarray(py)
-            .to_owned())
+            .into_pyarray_bound(py)
+            .into())
     }
     #[getter]
     pub fn get_first_nt_bias_ins_vd(&self, py: Python) -> Result<Py<PyArray1<f64>>> {
@@ -620,8 +624,8 @@ impl PyModel {
             .inner
             .get_first_nt_bias_ins_vd()?
             .to_owned()
-            .into_pyarray(py)
-            .to_owned())
+            .into_pyarray_bound(py)
+            .into())
     }
     #[getter]
     pub fn get_first_nt_bias_ins_dj(&self, py: Python) -> Result<Py<PyArray1<f64>>> {
@@ -629,8 +633,8 @@ impl PyModel {
             .inner
             .get_first_nt_bias_ins_dj()?
             .to_owned()
-            .into_pyarray(py)
-            .to_owned())
+            .into_pyarray_bound(py)
+            .into())
     }
     #[getter]
     /// Return the marginal on (D, J)
@@ -639,14 +643,19 @@ impl PyModel {
             .inner
             .get_p_dj()?
             .to_owned()
-            .into_pyarray(py)
-            .to_owned())
+            .into_pyarray_bound(py)
+            .into())
     }
 }
 
 #[pymodule]
 #[pyo3(name = "_righor")]
-fn righor_py(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
+fn righor_py(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+    // register the host handler with python logger, providing a logger target
+    pyo3_pylogger::register("righor");
+    // initialize up a logger
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("trace")).init();
+
     m.add_class::<PyModel>()?;
     m.add_class::<righor::shared::GenerationResult>()?;
     m.add_class::<righor::vdj::Sequence>()?;
