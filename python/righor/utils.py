@@ -80,6 +80,32 @@ def load_model(species: str, chain: str, identifier=None):
                 f"Wrong species ({species}) and/or chain ({chain}) and/or id ({id})"))
     return model
 
+def load_model_from_files(json=None, path_params=None,
+                         path_marginals=None,
+                         path_anchor_vgene=None,
+                         path_anchor_jgene=None):
+    """ Load a model from a file.
+    If json is not None, load the model from the json file.
+    If all the path_* parameters are not None, load from a `Igor Format`
+    """
+    if json is not None:
+        try:
+            return _righor.Model.load_json(json)
+        except:
+            raise(ValueError("Invalid json file, or invalid filename."))
+    if path_params is not None and path_marginals is not None \
+       and path_anchor_vgene is not None and path_anchor_jgene is not None:
+        try:
+            return _righor.Model.load_from_files(path_params, path_marginals,
+                                      path_anchor_vgene, path_anchor_jgene)
+        except:
+            raise(ValueError("Invalid igor model files, or wrong filenames."))
+
+    else:
+        raise(ValueError(
+        f"Absent files"))
+
+
 
 def genes_matching(x: str, model):
     """ Map relatively standard gene name to
