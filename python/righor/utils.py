@@ -6,6 +6,13 @@ import itertools
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import olga
+import os
+
+
+def fix_number_threads(num_threads):
+    os.environ["RAYON_NUM_THREADS"] = f"{num_threads}"
+
 
 
 def load_model(species: str, chain: str, identifier=None):
@@ -29,22 +36,15 @@ def load_model(species: str, chain: str, identifier=None):
     model_dir = path_model.absolute().as_posix()
 
     try:
-        # Just try to load both
-        model = _righor.vdj.Model.load_model(species,
+        model = _righor.Model.load_model(species,
                                              chain,
                                              model_dir,
                                              identifier)
     except:
-        try:
-            model = _righor.vj.Model.load_model(species,
-                                                chain,
-                                                model_dir,
-                                                identifier)
-        except:
-            if identifier is None:
-                raise(ValueError(f"Wrong species ({species}) and/or chain ({chain})")) 
-            else:
-                raise(ValueError(f"Wrong species ({species}) and/or chain ({chain}) and/or id ({id})"))
+        if identifier is None:
+            raise(ValueError(f"Wrong species ({species}) and/or chain ({chain})")) 
+        else:
+            raise(ValueError(f"Wrong species ({species}) and/or chain ({chain}) and/or id ({id})"))
     return model
 
 
@@ -60,7 +60,7 @@ def genes_matching(x: str, model):
         * x: V or J gene name, form: TYPE##-##*##, or TYPE##-##
         or TYPE[V,J]##, where ## can be interpreted as digits/letters
         and TYPE = "IGH","IGK","IGL" or "TRB"/"TRA"/"TRG"/"TRD"
-        * model: righor.vj.Model or righor.vdj.Model object.
+        * model: righor.Model object.
         @ Return:
         * list of righor Gene object (x.name to get their names)
         @ Example:
@@ -305,7 +305,7 @@ def plot_vdj(*args, plots_kws=None):
         
     for ax in [ax_V, ax_D, ax_J]:
         ylim = ax.get_ylim()
-        ylim = (max(ylim[0], 1e-6), ylim[1])
+        ylim = (max(ylim[0], 1e-6), 1.)
         ax.set_ylim(ylim)
 
     if 'label' in plots_kws[0]:
