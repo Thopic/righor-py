@@ -5,7 +5,7 @@ build-backend = "maturin"
 
 [project]
 name = "righor"
-version = "0.2.8" ## Also need to update the cargo.toml version
+version = "0.2.9" ## Also need to update the cargo.toml version
 require-python = ">=3.7,<=3.12"
 dependencies = [
     "seaborn",

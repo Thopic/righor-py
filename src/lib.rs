@@ -5,7 +5,7 @@ use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use rayon::prelude::*;
-use righor::shared::model::*;
+use righor::shared::model::{Generator, Model, ModelStructure, Modelable};
 use righor::shared::VJAlignment;
 use righor::shared::{errors::PyErrorParameters, Features};
 pub use righor::shared::{AminoAcid, Dna, DnaLike, Gene};
@@ -68,7 +68,7 @@ impl PyModel {
     pub fn save_model(&self, directory: &str) -> Result<()> {
         let path = Path::new(directory);
         match fs::create_dir(path) {
-            Ok(_) => self.inner.save_model(path),
+            Ok(()) => self.inner.save_model(path),
             Err(e) => Err(e.into()),
         }
     }
@@ -76,7 +76,7 @@ impl PyModel {
     /// Save the model in json format
     pub fn save_json(&self, filename: &str) -> Result<()> {
         let path = Path::new(filename);
-        self.inner.save_json(&path)
+        self.inner.save_json(path)
     }
 
     /// Save the model in json format
@@ -84,7 +84,7 @@ impl PyModel {
     pub fn load_json(filename: &str) -> Result<PyModel> {
         let path = Path::new(filename);
         Ok(PyModel {
-            inner: righor::shared::Model::load_json(&path)?,
+            inner: righor::shared::Model::load_json(path)?,
             features: None,
         })
     }
@@ -103,7 +103,7 @@ impl PyModel {
         available_v: Option<Vec<Gene>>,
         available_j: Option<Vec<Gene>>,
     ) -> Result<Generator> {
-        Generator::new(self.inner.clone(), seed, available_v, available_j)
+        Generator::new(&self.inner.clone(), seed, available_v, available_j)
     }
 
     pub fn filter_vs(&self, vs: Vec<Gene>) -> Result<PyModel> {
@@ -139,12 +139,13 @@ impl PyModel {
 
     #[pyo3(signature = (seqs, align_params=righor::shared::AlignmentParameters::default_evaluate(), inference_params=righor::shared::InferenceParameters::default_evaluate()))]
     /// Infer the model. str_seqs can be either a list of aligned sequences, a list of nucleotide sequences or a list of (cdr3, V, J) sequences.
+    /// Return the total log-likelihood
     pub fn infer(
         &mut self,
         seqs: &Bound<'_, PyAny>,
         align_params: righor::shared::AlignmentParameters,
         inference_params: righor::shared::InferenceParameters,
-    ) -> Result<()> {
+    ) -> Result<f64> {
         let opt_sequences: Result<Vec<EntrySequence>, _> = (|| {
             if let Ok(seq) = seqs.extract::<Vec<Sequence>>() {
                 return seq
@@ -179,14 +180,16 @@ impl PyModel {
 
         let sequences = opt_sequences?;
 
-        self.features = Some(self.inner.infer(
+        let all_inferred = self.inner.infer(
             &sequences,
             self.features.clone(),
             &align_params,
             &inference_params,
-        )?);
+        )?;
 
-        Ok(())
+        self.features = Some(all_inferred.0);
+
+        Ok(all_inferred.1)
     }
 
     /// Align one nucleotide sequence and return a `Sequence` object
@@ -390,6 +393,11 @@ impl PyModel {
             &model.inner,
             align_params,
         ))
+    }
+
+    /// Return the gene with the exact name `name`
+    pub fn get_gene(&self, name: &str) -> Result<Gene> {
+        self.inner.get_gene(name)
     }
 
     #[setter]
@@ -614,7 +622,7 @@ impl PyModel {
         Ok(self
             .inner
             .get_first_nt_bias_ins_vj()?
-            .to_owned()
+            .clone()
             .into_pyarray_bound(py)
             .into())
     }
@@ -623,7 +631,7 @@ impl PyModel {
         Ok(self
             .inner
             .get_first_nt_bias_ins_vd()?
-            .to_owned()
+            .clone()
             .into_pyarray_bound(py)
             .into())
     }
@@ -632,7 +640,7 @@ impl PyModel {
         Ok(self
             .inner
             .get_first_nt_bias_ins_dj()?
-            .to_owned()
+            .clone()
             .into_pyarray_bound(py)
             .into())
     }
