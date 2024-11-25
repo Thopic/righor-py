@@ -5,8 +5,14 @@ build-backend = "maturin"
 
 [project]
 name = "righor"
-version = "0.2.8" ## Also need to update the cargo.toml version
-require-python = ">=3.7"
+version = "0.2.9" ## Also need to update the cargo.toml version
+require-python = ">=3.7,<=3.12"
+dependencies = [
+    "seaborn",
+    "matplotlib",
+    "tqdm",
+    "numpy"
+]
 
 [tool.maturin]
 # "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
