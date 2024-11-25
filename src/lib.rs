@@ -659,11 +659,6 @@ impl PyModel {
 #[pymodule]
 #[pyo3(name = "_righor")]
 fn righor_py(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // register the host handler with python logger, providing a logger target
-    pyo3_pylogger::register("righor");
-    // initialize up a logger
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("trace")).init();
-
     m.add_class::<PyModel>()?;
     m.add_class::<righor::shared::GenerationResult>()?;
     m.add_class::<righor::vdj::Sequence>()?;
