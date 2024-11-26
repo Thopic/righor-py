@@ -20,6 +20,7 @@ permissions:
 
 jobs:
   # linux:
+  #   if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
   #   runs-on: ${{ matrix.platform.runner }}
   #   strategy:
   #     matrix:
@@ -55,6 +56,7 @@ jobs:
   #         path: dist
 
   # musllinux:
+  #   if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
   #   runs-on: ${{ matrix.platform.runner }}
   #   strategy:
   #     matrix:
@@ -86,6 +88,7 @@ jobs:
   #         path: dist
 
   # windows:
+  #   if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
   #   runs-on: ${{ matrix.platform.runner }}
   #   strategy:
   #     matrix:
@@ -113,6 +116,7 @@ jobs:
   #         path: dist
 
   # macos:
+  #   if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
   #   runs-on: ${{ matrix.platform.runner }}
   #   strategy:
   #     matrix:
@@ -174,6 +178,8 @@ jobs:
       - name: Debug file structure
         run: |
           ls -R
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
       - name: Publish to PyPI
         if: "startsWith(github.ref, 'refs/tags/')"
         uses: PyO3/maturin-action@v1
