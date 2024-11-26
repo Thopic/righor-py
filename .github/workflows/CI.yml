@@ -177,6 +177,6 @@ jobs:
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
-	  working-directory: .
+          working-directory: .
           command: upload
           args: --non-interactive --skip-existing wheels-*/*
